@@ -1,0 +1,8 @@
+discord.py-self==2.1.0
+httpx==0.28.1
+boto3==1.40.61
+pymongo==4.16.0
+python-dotenv==1.2.2
+psutil==7.2.2
+pyzmq==27.1.0
+dnspython==2.8.0
