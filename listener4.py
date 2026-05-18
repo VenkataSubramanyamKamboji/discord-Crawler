@@ -17,7 +17,7 @@ import datetime
 import re
 from botocore.config import Config
 import unicodedata
-# from performance import update_throughput
+
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ BATCH_TIMEOUT = 4
 s3_config = Config(
     connect_timeout=30, 
     read_timeout=60,      # Increase read timeout to 60s
-    retries={'max_attempts': 5} # Auto-retry on glitch
+    retries={'max_attempts': 3} # Auto-retry on glitch
 )
 
 # --- 2. SHARED RESOURCES & CLIENTS ---
@@ -64,7 +64,6 @@ zmq_socket.bind("tcp://127.0.0.1:5555")
 upload_executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
 
 # Clients
-# Updated to native AWS S3 (removed endpoint_url)
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=ACCESS_KEY,
@@ -92,7 +91,7 @@ def sanitize_filename(filename):
     return filename if filename else "attachment"
 
 def upload_to_s3(url, message_id, filename, content_type, custom_metadata):
-    """Replaced upload_to_minio with AWS S3 logic."""
+    """ AWS S3 logic."""
     try:
         response = http_client.get(url)
         if response.status_code == 200:
@@ -229,7 +228,7 @@ def db_worker():
                      # Insert batch (duplicates will be ignored via ordered=False)
                     messages_collection.insert_many(batch, ordered=False)
                 except Exception:
-                    # BulkWriteErrors (duplicates) are ignored as intended
+                    # BulkWriteErrors (duplicates) are ignored 
                     pass 
 
                 for msg_data in batch:
