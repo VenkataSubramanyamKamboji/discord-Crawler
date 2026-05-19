@@ -228,7 +228,7 @@ def db_worker():
                      # Insert batch (duplicates will be ignored via ordered=False)
                     messages_collection.insert_many(batch, ordered=False)
                 except Exception:
-                    # BulkWriteErrors (duplicates) are ignored 
+                    # BulkWriteErrors (duplicates) are ignored bt this
                     pass 
 
                 for msg_data in batch:
@@ -294,7 +294,7 @@ class MultiAccountClient(discord.Client):
     async def on_message(self, message):
         if message.author == self.user:
             return
-        # update_throughput()
+        
 
         channel = message.channel
         member = message.author

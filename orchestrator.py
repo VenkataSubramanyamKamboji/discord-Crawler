@@ -45,12 +45,12 @@ class IngestionOrchestrator:
 
     def handle_replacement(self, index):
         """Logic for 1-to-1 Hot-Swap: Replaces a banned slot with its specific twin"""
-        # 1. Direct Dictionary Lookup (Fast O(1) speed)
+        # 1. Direct Dictionary Lookup (Fast O(1) speed) for duplicate token.
         new_token = self.reserve_map.get(index)
 
         if not new_token:
             print(f"🛑 Orchestrator: No specific backup available for Slot {index + 1}.")
-            # Mark as BANNED_ACCOUNT so the health monitor ignores this slot permanently
+            # it Marks as BANNED_ACCOUNT so the health monitor ignores this slot permanently
             self.fleet[index] = "BANNED_ACCOUNT"
             return
 
@@ -121,7 +121,7 @@ class IngestionOrchestrator:
         # 3. The Monitor Loop (Self-Healing)
         try:
             while self.is_running:
-                time.sleep(29) # Check system health every 30 seconds
+                time.sleep(29) # Checks system health every 30 seconds
                 # Filter to count ONLY truly active/connected clients
                 actual_active = sum(1 for c in self.fleet.values() if hasattr(c, 'is_closed') and not c.is_closed())
                 # --- PANIC SWITCH ---
@@ -176,163 +176,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-# import asyncio
-# import threading
-# import time
-# import random
-# import sys
-# import os
-# from xmlrpc import client
-# import discord
-# # Reach into your worker file to get the shared thread pool
-# import httpx
-# # Import your specific classes and resources from your worker file
-# from listener4 import MultiAccountClient, db_worker, TOKENS, zmq_context, upload_executor
-# RESERVE_MAP = {
-#     0: os.getenv("RESERVE_TOKEN_1"),
-#     6: os.getenv("RESERVE_TOKEN_7"), # Twin for your 7th account
-#     # Add others as needed...
-# }
-# messages_in_current_batch = 0
-# class IngestionOrchestrator:
-#     def __init__(self,reserve_map):
-#         self.fleet = {}  # Tracks account instances: {index: client_object}
-#         self.reserve_map = reserve_map
-#         self.is_running = True
-
-#     def is_internet_up(self):
-#          try:
-#             httpx.get("https://8.8.8.8", timeout=3.0)
-#             return True
-#          except:
-#              return False
-#     def handle_replacement(self, index):
-#         """Logic for 1-to-1 Hot-Swap: Replaces a banned slot with its specific twin"""
-#         # 1. Direct Dictionary Lookup (Fast O(1) speed)
-#         new_token = self.reserve_map.get(index)
-
-#         if not new_token:
-#             print(f"🛑 Orchestrator: No specific backup available for Slot {index + 1}.")
-#             # Mark as permanently banned so the health monitor stops trying
-#             self.fleet[index] = "BANNED_ACCOUNT"
-#             return
-
-#         print(f"♻️ Slot {index + 1}: Twin found. Initiating hot-swap...")
-
-#         # 2. Safety Delete from reserve so it's not reused
-#         del self.reserve_map[index]
-
-#         # 3. Resource & IP Safety Wait (Human Mimicry)
-#         # Essential for 8GB RAM to let garbage collection clear the old 'client'
-#         wait_time = random.uniform(20, 30) 
-#         print(f"⏳ Waiting {round(wait_time, 1)}s for network/RAM safety...")
-#         time.sleep(wait_time)
-
-#         # 4. Re-launch the twin into the same slot index
-#         self.spawn_worker(new_token, index)
-
-#     def spawn_worker(self, token, index):
-#         """Orchestrator: Launches a single worker account in a monitored thread"""
-#         # Disable chunking to save 8GB RAM
-#         client = MultiAccountClient(chunk_guilds_at_startup=False)
-#         self.fleet[index] = client
-        
-#         def run_worker():
-#             try:
-#                 # Start the Discord connection
-#                 client.run(token)
-#             except discord.errors.LoginFailure:
-#             # THIS IS THE BAN TRIGGER
-#                 print(f"🚨 ALERT: Account {index} is BANNED or the Token is Invalid!")
-#             # Mark this account as inactive so the orchestrator stops trying to restart it
-#                 self.fleet[index] = "BANNED"
-
-#                 # TRIGGER AUTO-REPLACEMENT
-#                 self.handle_replacement(index)
-#                 try:
-#                     asyncio.run_coroutine_threadsafe(client.close(), client.loop)
-#                 except:
-#                     pass
-#             except Exception as e:
-#                 print(f"⚠️ Orchestrator: Worker {index} stopped. Error: {e}")
-
-#         # daemon=True ensures threads close when the main script stops
-#         t = threading.Thread(target=run_worker, daemon=True)
-#         t.start()
-#         print(f"✅ Orchestrator: Worker {index} launched successfully.")
-
-#     def start_system(self):
-#         """The 'Director' sequence for high-throughput ingestion"""
-#         print("🚀 Starting Ingestion System Orchestration...")
-
-#         # 1. Start the Storage Service (DB Worker) first
-#         db_thread = threading.Thread(target=db_worker, daemon=True)
-#         db_thread.start()
-#         print("🗄️ Orchestrator: Database Storage Worker active.")
-
-#         # 2. Launch all accounts with randomized delays (Orchestration)
-#         for i, token in enumerate(TOKENS):
-#             if token:
-#                 self.spawn_worker(token, i)
-#                 # Random Jitter to look human and stay under rate limits
-#                 wait_time = random.uniform(5, 7)
-#                 print(f"⏳ Orchestrator: Waiting {round(wait_time, 1)}s before next worker...")
-#                 time.sleep(wait_time)
-
-#         # 3. The Monitor Loop (Self-Healing)
-#         try:
-#             while self.is_running:
-#                 time.sleep(29) # Check system health every 30 seconds
-
-#                 # --- ADD PANIC SWITCH HERE ---
-#                 # Count banned accounts in the fleet
-#                 banned_count = list(self.fleet.values()).count("BANNED_ACCOUNT")
-
-#                 if banned_count >= 3:
-#                     print(f"🛑 PANIC SWITCH TRIGGERED: {banned_count} bans detected.")
-#                     print("Shutting down immediately to save remaining accounts and prevent IP flagging.")
-#                     self.is_running = False
-#                     # Use os._exit to kill all daemon threads immediately
-                   
-#                     os._exit(1) 
-#                 # -----------------------------
-                
-#                 for i, client in self.fleet.items():
-#                 # 1. Skip accounts we know are banned
-#                     if client == "BANNED_ACCOUNT":
-#                         continue
-
-#     # 2. Only act if the client is actually disconnected
-#                     if client.is_closed():
-#                         print(f"🔄 Orchestrator: Worker {i} is down. Checking network...")
-
-#         # 3. Only attempt recovery if the internet is confirmed working
-#                         if self.is_internet_up():
-#                             print(f"📡 Network OK. Attempting recovery for Worker {i}...")
-#                             self.spawn_worker(TOKENS[i], i)
-#                         else:
-#                             print(f"📡 Network is still down. Recovery for Worker {i} postponed.")
-                
-
-#                 # Report system-wide throughput stats
-#                 # print(f"📊 System Status | Queue: {message_queue.qsize()} | Active Workers: {len(self.fleet)}")
-#                 print(f"📊 System Status | In-Batch: {messages_in_current_batch} | Active Workers: {len(self.fleet)}")
-
-#         except KeyboardInterrupt:
-#             print("\n🛑 Orchestrator: Emergency shutdown initiated...")
-#             self.is_running = False
-                   
-#             print("⏳ Waiting for pending MinIO uploads to finish...")
-#             # # 2. This blocks the script until all current 50-message batches are saved
-#             upload_executor.shutdown(wait=True) 
-            
-#             print("✅ All nodes closed. System offline.")
-
-# if __name__ == "__main__":
-#     director = IngestionOrchestrator(RESERVE_MAP)
-#     director.start_system()
