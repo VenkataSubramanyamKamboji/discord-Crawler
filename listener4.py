@@ -50,7 +50,7 @@ BATCH_TIMEOUT = 4
 
 s3_config = Config(
     connect_timeout=30, 
-    read_timeout=60,      # Increase read timeout to 60s
+    read_timeout=60,      
     retries={'max_attempts': 3} # Auto-retry on glitch
 )
 
