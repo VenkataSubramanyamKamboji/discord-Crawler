@@ -139,6 +139,7 @@ def process_and_update_db(mongo_id_str, data, item, item_type):
         "video": "videos"
     }
     field_name = mapping.get(item_type, "other_files")
+    target_filename = item.get("filename") if item.get("filename") else "unknown"
 
     # 2. Upload to S3
     custom_meta = {
@@ -153,7 +154,8 @@ def process_and_update_db(mongo_id_str, data, item, item_type):
     aws_url = upload_to_s3(
         item["url"], 
         data["message_id"], 
-        item.get("filename", "file"), 
+        # item.get("filename", "file"), 
+        target_filename,
         item.get("type", "application/octet-stream"),
         custom_meta
     )
@@ -171,7 +173,8 @@ def process_and_update_db(mongo_id_str, data, item, item_type):
                 f"{field_name}.$[elem].s3_url": aws_url
             }
         }
-        filters = [{"elem.url": item["url"]}]
+        # filters = [{"elem.url": item["url"]}]
+        filters = [{"elem.filename": target_filename}]
 
         messages_collection.update_one(
             {"_id": mongo_id}, 
