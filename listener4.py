@@ -1,7 +1,5 @@
 import asyncio
-from email import message
 import discord
-from discord.ext import commands
 import os
 import httpx
 import zmq
@@ -35,10 +33,10 @@ TOKENS = [
     os.getenv("DISCORD_TOKEN_10")
 ]
 
-# AWS S3 Credentials (formerly MinIO)
-ACCESS_KEY = os.getenv('ACCESS_KEY') # Your IAM Access Key
-SECRET_KEY = os.getenv('SECRET_KEY')     # Your IAM Secret Key
-BUCKET_NAME = os.getenv('BUCKET_NAME') # Removed trailing space
+# AWS S3 Credentials 
+ACCESS_KEY = os.getenv('ACCESS_KEY') #  IAM Access Key
+SECRET_KEY = os.getenv('SECRET_KEY')     #  IAM Secret Key
+BUCKET_NAME = os.getenv('BUCKET_NAME') 
 REGION = os.getenv('REGION') # Mumbai Region
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
@@ -165,14 +163,14 @@ def process_and_update_db(mongo_id_str, data, item, item_type):
 
     # 3. Update MongoDB
     try:
-        # Unpack ObjectId for internal metadata tracking
+        # Unpacked ObjectId for internal metadata tracking
         unpacked_metadata = {
             "stored_at": str(mongo_id.generation_time),
             "machine_pid_hex": mongo_id.binary[4:9].hex(),
             "counter_hex": mongo_id.binary[9:12].hex(),
         }
         
-        # Use array_filters to target the exact attachment by its original URL
+        #  array_filters to target the exact attachment by its original URL
         update_payload = {
             "$set": {
                 "obj_id_unpacking": unpacked_metadata,
@@ -203,7 +201,7 @@ def db_worker():
     batch = []
     last_flush_time = time.time()
     
-    # Ensure index exists for performance and data integrity
+    # Ensuring  index exists for performance and data integrity
     messages_collection.create_index("message_id", unique=True)
 
     while True:
@@ -222,19 +220,19 @@ def db_worker():
                 batch.append(data)
 
             current_time = time.time()
-            # Flush batch if size limit reached or timeout occurred
+            # Flushes batch if size limit reached or timeout occurred
             if len(batch) >= BATCH_SIZE or (batch and current_time - last_flush_time >= BATCH_TIMEOUT):
                 try:
                      # Insert batch (duplicates will be ignored via ordered=False)
                     messages_collection.insert_many(batch, ordered=False)
                 except Exception:
-                    # BulkWriteErrors (duplicates) are ignored bt this
+                    # BulkWriteErrors (duplicates) are ignored by this
                     pass 
 
                 for msg_data in batch:
                     real_id_str = str(msg_data["_id"])
                     
-                    # 1. Process attachments ONLY if they exist
+                    # 1. Processes attachments ONLY if they exist
                     if msg_data.get("has_attachments"):
                         # Define categories to iterate through
                         media_categories = {
@@ -269,7 +267,7 @@ def db_worker():
             time.sleep(1)
 
 # # # --- 5. MULTI-ACCOUNT CLIENT CLASS ---
-# (Remains identical to original functionality)
+
 class MultiAccountClient(discord.Client):
     async def on_ready(self):
         print(f"✅ Account Active: {self.user}")
