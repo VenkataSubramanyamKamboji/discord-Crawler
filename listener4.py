@@ -44,7 +44,7 @@ DB_NAME = "discord_data_5"
 COLLECTION_NAME = "messages"
 
 BATCH_SIZE = 170
-BATCH_TIMEOUT = 4
+BATCH_TIMEOUT = 3
 
 s3_config = Config(
     connect_timeout=30, 
@@ -163,17 +163,11 @@ def process_and_update_db(mongo_id_str, data, item, item_type):
 
     # 3. Update MongoDB
     try:
-        # Unpacked ObjectId for internal metadata tracking
-        unpacked_metadata = {
-            "stored_at": str(mongo_id.generation_time),
-            "machine_pid_hex": mongo_id.binary[4:9].hex(),
-            "counter_hex": mongo_id.binary[9:12].hex(),
-        }
         
         #  array_filters to target the exact attachment by its original URL
         update_payload = {
             "$set": {
-                "obj_id_unpacking": unpacked_metadata,
+                # "obj_id_unpacking": data["obj_id_unpacking"],
                 f"{field_name}.$[elem].s3_url": aws_url
             }
         }
@@ -217,6 +211,12 @@ def db_worker():
                 # data["_id"] = ObjectId(data["_id"]) # Convert back to ObjectId for MongoDB
                 # Generate the primary key here instead of in on_message
                 data["_id"] = ObjectId()
+                data["obj_id_unpacking"] = {
+                    "stored_at": data["_id"].generation_time.isoformat(),
+                    "machine_pid_hex": data["_id"].binary[4:9].hex(),
+                    "counter_hex": data["_id"].binary[9:12].hex(),
+                    "raw_id": str(data["_id"])
+                }
                 batch.append(data)
 
             current_time = time.time()
@@ -265,6 +265,7 @@ def db_worker():
         except Exception as e:
             print(f"⚠️ Worker Loop Error: {e}")
             time.sleep(1)
+
 
 # # # --- 5. MULTI-ACCOUNT CLIENT CLASS ---
 
